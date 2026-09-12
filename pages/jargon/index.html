@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>群黑话管理</title>
+<style>
+:root {
+  --bg: #fafafa; --panel: #fff; --text: #1d1d1f; --muted: #86868b;
+  --line: #e5e5ea; --accent: #0071e3; --danger: #d70015; --ok: #248a3d;
+}
+[data-theme="dark"] {
+  --bg: #161617; --panel: #1d1d1f; --text: #f5f5f7; --muted: #86868b;
+  --line: #38383a; --accent: #0a84ff; --danger: #ff453a; --ok: #30d158;
+}
+* { box-sizing: border-box; margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 14px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.shell { max-width: 980px; margin: 0 auto; padding: 20px 16px 48px; }
+.topbar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+h1 { font-size: 20px; font-weight: 600; }
+.stats { color: var(--muted); font-size: 13px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.settings { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.settings label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+input, select, button {
+  font: inherit; color: var(--text); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
+}
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+input[type="search"] { flex: 1; min-width: 160px; }
+input.num { width: 76px; }
+button { cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.link { border: none; background: none; color: var(--accent); padding: 2px 6px; }
+button.link.danger { color: var(--danger); }
+button:disabled { opacity: .5; cursor: default; }
+.switch { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.addform { display: none; }
+.addform.open { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.addform input.meaning { flex: 2; min-width: 200px; }
+.addform input.word { flex: 1; min-width: 120px; }
+.list { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.row { border-top: 1px solid var(--line); }
+.row:first-child { border-top: none; }
+.row-main { display: grid; grid-template-columns: minmax(90px,140px) 1fr auto; gap: 10px; padding: 10px 14px; align-items: start; }
+.term { font-weight: 600; word-break: break-all; }
+.meaning { word-break: break-all; white-space: pre-wrap; }
+.meaning.empty { color: var(--muted); font-style: italic; }
+.editbox { display: flex; gap: 6px; }
+.editbox input { flex: 1; }
+.meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.chip { border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; font-size: 12px; color: var(--muted); }
+.chip.ok { color: var(--ok); border-color: var(--ok); }
+.chip.manual { color: var(--accent); border-color: var(--accent); }
+.ops { display: flex; gap: 2px; white-space: nowrap; }
+.evidence { display: none; padding: 0 14px 12px; }
+.evidence.open { display: block; }
+.evidence h4 { font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 4px; }
+.evidence li { font-size: 13px; color: var(--muted); margin: 4px 0 0 16px; word-break: break-all; }
+.empty { padding: 40px; text-align: center; color: var(--muted); }
+.pager { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 14px; color: var(--muted); font-size: 13px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 8px 16px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: .92; }
+@media (max-width: 640px) { .row-main { grid-template-columns: 1fr; } .ops { justify-content: flex-end; } }
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="topbar">
+    <h1>群黑话管理</h1>
+    <div style="display:flex;gap:14px;align-items:center">
+      <span class="stats" id="stats">--</span>
+      <label class="switch"><input type="checkbox" id="enabledSwitch" /> 学习开关</label>
+    </div>
+  </header>
+
+  <div class="panel settings">
+    <label>分析模型
+      <select id="providerSelect" style="min-width:220px"></select>
+    </label>
+    <label>学习频率（条/次）
+      <input class="num" type="number" id="cfgFreq" min="5" max="10000" />
+    </label>
+    <label>单次提取上限
+      <input class="num" type="number" id="cfgExtract" min="1" max="100" />
+    </label>
+    <label>注入上限
+      <input class="num" type="number" id="cfgInject" min="1" max="50" />
+    </label>
+    <button class="primary" id="saveCfgBtn">保存设置</button>
+  </div>
+
+  <div class="toolbar">
+    <input type="search" id="searchInput" placeholder="搜索词条或含义…" />
+    <select id="kindSelect">
+      <option value="all">全部</option>
+      <option value="jargon">已确认黑话</option>
+      <option value="candidate">候选（学习中）</option>
+      <option value="manual">手动录入</option>
+    </select>
+    <button class="primary" id="refreshBtn">刷新</button>
+    <button id="addToggleBtn">手动录入</button>
+  </div>
+
+  <div class="panel addform" id="addForm">
+    <input class="word" id="addWord" placeholder="词条（黑话本体）" maxlength="64" />
+    <input class="meaning" id="addMeaning" placeholder="含义" maxlength="500" />
+    <button class="primary" id="addSubmitBtn">录入</button>
+    <button class="link" id="addCancelBtn">取消</button>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <div class="pager">
+    <button class="link" id="prevBtn">上一页</button>
+    <span id="pageInfo">--</span>
+    <button class="link" id="nextBtn">下一页</button>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script src="/api/plugin/page/bridge-sdk.js"></script>
+<script>
+const PLUGIN = "astrbot_plugin_jargon";
+const state = { page: 1, size: 50, total: 0, search: "", kind: "all" };
+const $ = id => document.getElementById(id);
+
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+function normalize(raw) {
+  if (raw && typeof raw === "object" && "status" in raw) return raw;
+  return { status: "ok", message: "", data: raw || {} };
+}
+
+async function api(endpoint, payload = {}) {
+  const bridge = window.AstrBotPluginPage;
+  if (bridge && typeof bridge.apiPost === "function") {
+    return normalize(await bridge.apiPost(endpoint, payload));
+  }
+  const res = await fetch(`/api/plug/${PLUGIN}/${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return normalize(await res.json());
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g,
+    c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function fmtTime(ts) {
+  if (!ts) return "--";
+  const d = new Date(ts * 1000);
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function fmtScopes(item) {
+  const n = Object.keys(item.scopes || {}).length;
+  if (item.is_global) return "全局";
+  return n ? `${n} 个会话` : "本会话";
+}
+
+function render(items) {
+  const list = $("list");
+  if (!items.length) {
+    list.innerHTML = `<div class="empty">没有匹配的黑话记录</div>`;
+    return;
+  }
+  list.innerHTML = items.map(item => `
+    <div class="row" data-id="${item.id}">
+      <div class="row-main">
+        <div class="term">${esc(item.content)}</div>
+        <div class="meaning-cell">
+          <div class="meaning ${item.meaning ? "" : "empty"}">${esc(item.meaning) || "（还没推断出含义）"}</div>
+          <div class="meta">
+            <span class="chip">x${item.count}</span>
+            <span class="chip">${fmtScopes(item)}</span>
+            ${item.is_jargon ? '<span class="chip ok">已确认</span>' : '<span class="chip">候选</span>'}
+            ${item.created_by === "manual" ? '<span class="chip manual">手动</span>' : ""}
+            ${item.is_complete ? '<span class="chip">推断完成</span>' : ""}
+            <span>更新于 ${fmtTime(item.updated_at)}</span>
+          </div>
+        </div>
+        <div class="ops">
+          <button class="link" data-act="expand">详情</button>
+          <button class="link" data-act="edit">改含义</button>
+          <button class="link" data-act="global">${item.is_global ? "取消全局" : "设为全局"}</button>
+          <button class="link danger" data-act="del">删除</button>
+        </div>
+      </div>
+      <div class="evidence">
+        <h4>学习证据（${(item.evidence || []).length} 条）</h4>
+        <ul>${(item.evidence || []).map(e => `<li>${esc(e)}</li>`).join("") || "<li>无</li>"}</ul>
+      </div>
+    </div>`).join("");
+  // 把数据挂回 DOM，避免 HTML 转义来回折腾
+  const rows = list.querySelectorAll(".row");
+  items.forEach((item, i) => { rows[i]._item = item; });
+}
+
+async function load() {
+  const res = await api("jargon/list", {
+    search: state.search, kind: state.kind, page: state.page, size: state.size,
+  });
+  if (res.status !== "ok") { toast(res.message || "加载失败"); return; }
+  const d = res.data;
+  state.total = d.total;
+  render(d.items);
+  $("stats").textContent =
+    `共 ${d.stats.total} 候选 · ${d.stats.learned} 已确认 · ${d.stats.manual} 手动`;
+  $("enabledSwitch").checked = !!d.enabled;
+  const pages = Math.max(1, Math.ceil(d.total / state.size));
+  $("pageInfo").textContent = `第 ${d.page} / ${pages} 页 · ${d.total} 条`;
+  $("prevBtn").disabled = d.page <= 1;
+  $("nextBtn").disabled = d.page >= pages;
+}
+
+async function loadConfig() {
+  const res = await api("jargon/config", {});
+  if (res.status !== "ok") return;
+  const d = res.data;
+  const sel = $("providerSelect");
+  sel.innerHTML = `<option value="">跟随主模型</option>` +
+    (d.providers || []).map(p =>
+      `<option value="${esc(p.id)}">${esc(p.id)}（${esc(p.model || p.type)}）</option>`
+    ).join("");
+  sel.value = d.provider_id || "";
+  $("cfgFreq").value = d.learn_frequency;
+  $("cfgExtract").value = d.extract_max;
+  $("cfgInject").value = d.inject_max;
+}
+
+$("list").addEventListener("click", async ev => {
+  const btn = ev.target.closest("button[data-act]");
+  if (!btn) return;
+  const row = btn.closest(".row");
+  const item = row._item;
+  const act = btn.dataset.act;
+
+  if (act === "expand") {
+    row.querySelector(".evidence").classList.toggle("open");
+    return;
+  }
+  if (act === "edit") {
+    const cell = row.querySelector(".meaning-cell");
+    const old = cell.querySelector(".meaning");
+    if (cell.querySelector(".editbox")) return;
+    const box = document.createElement("div");
+    box.className = "editbox";
+    box.innerHTML = `<input maxlength="500" value="" /><button class="link">保存</button><button class="link">取消</button>`;
+    const input = box.querySelector("input");
+    input.value = item.meaning || "";
+    const [saveBtn, cancelBtn] = box.querySelectorAll("button");
+    old.style.display = "none";
+    cell.insertBefore(box, cell.firstChild);
+    input.focus();
+    cancelBtn.onclick = () => { box.remove(); old.style.display = ""; };
+    saveBtn.onclick = async () => {
+      const meaning = input.value.trim();
+      if (!meaning) { toast("含义不能为空"); return; }
+      const res = await api("jargon/add", { content: item.content, meaning });
+      toast(res.message);
+      if (res.status === "ok") load();
+    };
+    return;
+  }
+  if (act === "global") {
+    const res = await api("jargon/toggle_global", { content: item.content });
+    toast(res.message);
+    if (res.status === "ok") load();
+    return;
+  }
+  if (act === "del") {
+    if (btn.dataset.armed) {
+      const res = await api("jargon/delete", { content: item.content });
+      toast(res.message);
+      if (res.status === "ok") load();
+    } else {
+      btn.dataset.armed = "1";
+      btn.textContent = "确认删除？";
+      setTimeout(() => { btn.dataset.armed = ""; btn.textContent = "删除"; }, 3000);
+    }
+  }
+});
+
+$("refreshBtn").onclick = load;
+$("searchInput").oninput = () => {
+  clearTimeout($("searchInput")._t);
+  $("searchInput")._t = setTimeout(() => {
+    state.search = $("searchInput").value.trim();
+    state.page = 1;
+    load();
+  }, 300);
+};
+$("kindSelect").onchange = () => {
+  state.kind = $("kindSelect").value;
+  state.page = 1;
+  load();
+};
+$("prevBtn").onclick = () => { if (state.page > 1) { state.page--; load(); } };
+$("nextBtn").onclick = () => { state.page++; load(); };
+$("enabledSwitch").onchange = async () => {
+  const res = await api("jargon/switch", { enabled: $("enabledSwitch").checked });
+  toast(res.message);
+};
+$("addToggleBtn").onclick = () => {
+  $("addForm").classList.toggle("open");
+  $("addWord").focus();
+};
+$("addCancelBtn").onclick = () => {
+  $("addForm").classList.remove("open");
+  $("addWord").value = ""; $("addMeaning").value = "";
+};
+$("addSubmitBtn").onclick = async () => {
+  const content = $("addWord").value.trim();
+  const meaning = $("addMeaning").value.trim();
+  if (!content || !meaning) { toast("词条和含义都要填"); return; }
+  const res = await api("jargon/add", { content, meaning });
+  toast(res.message);
+  if (res.status === "ok") {
+    $("addWord").value = ""; $("addMeaning").value = "";
+    $("addForm").classList.remove("open");
+    load();
+  }
+};
+$("saveCfgBtn").onclick = async () => {
+  const res = await api("jargon/config", {
+    provider_id: $("providerSelect").value,
+    learn_frequency: Number($("cfgFreq").value),
+    extract_max: Number($("cfgExtract").value),
+    inject_max: Number($("cfgInject").value),
+  });
+  toast(res.message);
+};
+
+loadConfig();
+load();
+</script>
+</body>
+</html>
