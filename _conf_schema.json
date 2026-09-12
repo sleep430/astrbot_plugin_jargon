@@ -1,0 +1,40 @@
+{
+  "enabled": {
+    "description": "是否启用黑话系统总开关",
+    "type": "bool",
+    "hint": "关闭后停止收集、学习与注入",
+    "default": true
+  },
+  "learn_frequency": {
+    "description": "每个群每积累多少条消息触发一次黑话提取",
+    "type": "int",
+    "default": 40
+  },
+  "extract_max": {
+    "description": "单次提取的最大候选词条数",
+    "type": "int",
+    "default": 30
+  },
+  "inject_max": {
+    "description": "单次向 LLM 请求注入的最大黑话参考条数",
+    "type": "int",
+    "default": 10
+  },
+  "provider_id": {
+    "description": "黑话分析专用模型（填提供商 ID，留空则用当前会话的主模型）",
+    "type": "string",
+    "hint": "学习/推断黑话的 LLM 调用全部走这个模型，建议填个便宜的小模型",
+    "default": ""
+  },
+  "listen_private": {
+    "description": "是否也学习私聊消息",
+    "type": "bool",
+    "default": false
+  },
+  "blacklist_groups": {
+    "description": "群聊黑名单：这些群不收集、不学习、不注入黑话",
+    "type": "string",
+    "hint": "填群号，多个用逗号分隔，例如：123456,789012",
+    "default": ""
+  }
+}
