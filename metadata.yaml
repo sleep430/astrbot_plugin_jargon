@@ -2,6 +2,6 @@ name: astrbot_plugin_jargon
 desc: 群黑话自动学习系统：定时从聊天记录提取黑话候选，阶梯阈值触发「双路推断+对照判定」，命中后机械匹配注入 LLM 请求。思路移植自 MaiBot。
 version: v1.0.0
 author: 月咏小眠 & 睡觉
-repo: https://github.com/Mai-with-u/MaiBot
+repo: https://github.com/sleep430/astrbot_plugin_jargon
 display_name: 黑话学习系统
 short_desc: 像人一样偷偷学会群里的黑话
